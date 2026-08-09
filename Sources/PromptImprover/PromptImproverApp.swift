@@ -29,13 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // OLED-black chrome: blend the title bar into the content so the whole
-    // window reads as one seamless black surface.
+    // Factory-black chrome: blend the title bar into the content so the whole
+    // window reads as one seamless #020202 surface.
     private func style(_ window: NSWindow) {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
-        window.backgroundColor = NSColor.black
+        window.backgroundColor = NSColor(red: 0.008, green: 0.008, blue: 0.008, alpha: 1)
         window.isMovableByWindowBackground = true
     }
 

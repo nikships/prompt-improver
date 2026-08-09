@@ -163,18 +163,7 @@ struct ContentView: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(alignment: .top) {
-            ZStack(alignment: .top) {
-                Theme.background
-                // Ambient accent glow bleeding from the top edge.
-                Ellipse()
-                    .fill(Theme.accentStart.opacity(0.16))
-                    .frame(width: 460, height: 200)
-                    .blur(radius: 90)
-                    .offset(y: -120)
-            }
-            .ignoresSafeArea()
-        }
+        .background(Theme.background.ignoresSafeArea())
         .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
             guard let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -193,30 +182,40 @@ struct ContentView: View {
     }
 
     // Room for the traffic lights over the hidden title bar, with the
-    // Factory logo centered as the window's brand header.
+    // Factory logo centered as the window's brand header. A hairline rule
+    // underneath separates the header band, as on factory.ai's nav.
     private var titleBarSpacer: some View {
-        HStack {
-            Spacer()
-            LogoView(height: 16)
-                .opacity(0.85)
-            Spacer()
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                LogoView(height: 15)
+                    .opacity(0.9)
+                Spacer()
+            }
+            .frame(height: 30)
+            .padding(.top, 6)
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
+                .padding(.horizontal, -20)
+                .padding(.top, 8)
         }
-        .frame(height: 30)
-        .padding(.top, 6)
     }
 
     private var dropOverlay: some View {
-        RoundedRectangle(cornerRadius: 14)
-            .strokeBorder(Theme.accentGradient, lineWidth: 2)
-            .background(Theme.accentStart.opacity(0.06))
+        RoundedRectangle(cornerRadius: Theme.corner)
+            .strokeBorder(Theme.accent, lineWidth: 1.5)
+            .background(Theme.accent.opacity(0.05))
             .overlay {
                 Label("Drop folder to select repository", systemImage: "folder.badge.plus")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(Theme.mono(13, weight: .medium))
+                    .textCase(.uppercase)
+                    .tracking(0.8)
                     .foregroundStyle(Theme.textPrimary)
                     .padding(14)
-                    .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 10))
+                    .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.corner))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: Theme.corner)
                             .strokeBorder(Theme.borderStrong, lineWidth: 1)
                     )
             }
@@ -225,49 +224,50 @@ struct ContentView: View {
     }
 
     private var repositoryRow: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(index: "01", text: "Repository")
             HStack(spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(
                             model.repositoryURL != nil
-                                ? AnyShapeStyle(Theme.accentGradient)
-                                : AnyShapeStyle(Theme.textTertiary))
+                                ? Theme.accent
+                                : Theme.textTertiary)
                     if let repo = model.repositoryURL {
                         Text(repo.path)
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Theme.textPrimary.opacity(0.75))
+                            .font(Theme.mono(12))
+                            .foregroundStyle(Theme.textPrimary.opacity(0.8))
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .help(repo.path)
                     } else {
                         Text("No repository selected")
-                            .font(.system(size: 12))
+                            .font(Theme.mono(12))
                             .foregroundStyle(Theme.textSecondary)
                     }
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface))
-                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.border, lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: Theme.corner).fill(Theme.surface))
+                .overlay(RoundedRectangle(cornerRadius: Theme.corner).strokeBorder(Theme.border, lineWidth: 1))
 
-                Button("Choose…") {
+                Button("Choose") {
                     model.chooseRepository()
                 }
                 .buttonStyle(GhostButtonStyle())
             }
             Text("or drag & drop a folder anywhere in this window")
-                .font(.system(size: 11))
+                .font(Theme.mono(10))
                 .foregroundStyle(Theme.textTertiary)
-                .padding(.leading, 4)
+                .padding(.leading, 1)
         }
     }
 
     private var promptSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionLabel(text: "Prompt")
+            SectionLabel(index: "02", text: "Prompt")
             TextEditor(text: $model.prompt)
                 .font(.system(size: 13, design: .monospaced))
                 .foregroundStyle(Theme.textPrimary)
@@ -295,13 +295,14 @@ struct ContentView: View {
                 HStack(spacing: 10) {
                     ProgressView()
                         .controlSize(.small)
-                        .tint(Theme.accentStart)
-                    Text("Scanning repository…")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.textPrimary.opacity(0.7))
+                        .tint(Theme.accent)
+                    Text("SCANNING REPOSITORY")
+                        .font(Theme.mono(11, weight: .medium))
+                        .tracking(0.8)
+                        .foregroundStyle(Theme.textPrimary.opacity(0.75))
                     Text("\(model.elapsedSeconds)s")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(Theme.mono(11))
+                        .foregroundStyle(Theme.accent)
                         .monospacedDigit()
                         .contentTransition(.numericText())
                     Spacer()
@@ -322,21 +323,22 @@ struct ContentView: View {
                     Button {
                         model.improve()
                     } label: {
-                        HStack(spacing: 7) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 12, weight: .semibold))
+                        HStack(spacing: 8) {
                             Text("Improve")
-                            Text("⌘↩")
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.6))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 10, weight: .semibold))
                         }
                     }
-                    .buttonStyle(GradientButtonStyle())
+                    .buttonStyle(PrimaryButtonStyle())
                     .keyboardShortcut(.return, modifiers: .command)
                     .disabled(!model.canImprove)
-                    Text("Uses your repository for context")
-                        .font(.system(size: 11))
+                    Text("⌘↩")
+                        .font(Theme.mono(10))
                         .foregroundStyle(Theme.textTertiary)
+                    Text("Uses your repository for context")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.textTertiary)
+                        .padding(.leading, 4)
                     Spacer()
                     modelPicker
                 }
@@ -359,17 +361,18 @@ struct ContentView: View {
             HStack(spacing: 6) {
                 Image(systemName: "cpu")
                     .font(.system(size: 10))
-                Text(selectedModelName)
-                    .font(.system(size: 12, weight: .medium))
+                Text(selectedModelName.uppercased())
+                    .font(Theme.mono(11))
+                    .tracking(0.5)
                     .lineLimit(1)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }
             .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 11)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 7).fill(Theme.surfaceRaised))
-            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.border, lineWidth: 1))
+            .padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: Theme.corner).fill(Theme.surfaceRaised))
+            .overlay(RoundedRectangle(cornerRadius: Theme.corner).strokeBorder(Theme.borderStrong, lineWidth: 1))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -384,11 +387,13 @@ struct ContentView: View {
 
     private func errorBanner(_ message: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(.orange)
+            Text("ERR")
+                .font(Theme.mono(10, weight: .semibold))
+                .tracking(1)
+                .foregroundStyle(Theme.danger)
+                .padding(.top, 1)
             Text(message)
-                .font(.system(size: 12))
+                .font(Theme.mono(11))
                 .foregroundStyle(Theme.textPrimary)
                 .textSelection(.enabled)
             Spacer()
@@ -402,31 +407,26 @@ struct ContentView: View {
             .buttonStyle(.plain)
         }
         .padding(10)
-        .background(Color.orange.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .background(Theme.danger.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.corner))
         .overlay(
-            RoundedRectangle(cornerRadius: 9)
-                .strokeBorder(Color.orange.opacity(0.25), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.corner)
+                .strokeBorder(Theme.danger.opacity(0.35), lineWidth: 1)
         )
     }
 
     private var resultSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                SectionLabel(text: "Improved Prompt")
+                SectionLabel(index: "03", text: "Improved Prompt")
                 Spacer()
                 if !model.improvedPrompt.isEmpty {
-                    Button {
+                    Button(model.didCopy ? "Copied" : "Copy") {
                         model.copyImprovedPrompt()
-                    } label: {
-                        Label(model.didCopy ? "Copied" : "Copy",
-                              systemImage: model.didCopy ? "checkmark" : "doc.on.doc")
                     }
                     .buttonStyle(GhostButtonStyle())
-                    Button {
+                    Button("Use as Draft") {
                         model.useImprovedAsDraft()
-                    } label: {
-                        Label("Use as Draft", systemImage: "arrow.uturn.up")
                     }
                     .buttonStyle(GhostButtonStyle())
                 }
@@ -451,12 +451,12 @@ struct ContentView: View {
     }
 
     private var resultEmptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 26))
+        VStack(spacing: 12) {
+            DroidGlyph(size: 30)
                 .foregroundStyle(Theme.textTertiary)
-            Text("Your improved prompt will appear here")
-                .font(.system(size: 12))
+            Text("YOUR IMPROVED PROMPT WILL APPEAR HERE")
+                .font(Theme.mono(10))
+                .tracking(1.2)
                 .foregroundStyle(Theme.textTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
