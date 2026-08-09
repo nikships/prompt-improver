@@ -192,9 +192,17 @@ struct ContentView: View {
         }
     }
 
-    // Room for the traffic lights over the hidden title bar.
+    // Room for the traffic lights over the hidden title bar, with the
+    // Factory logo centered as the window's brand header.
     private var titleBarSpacer: some View {
-        Color.clear.frame(height: 26)
+        HStack {
+            Spacer()
+            LogoView(height: 16)
+                .opacity(0.85)
+            Spacer()
+        }
+        .frame(height: 30)
+        .padding(.top, 6)
     }
 
     private var dropOverlay: some View {
