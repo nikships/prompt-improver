@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum DroidRunnerError: LocalizedError {
     case droidNotFound
@@ -86,7 +87,7 @@ struct DroidRunner {
         }
     }
 
-    static func improve(prompt: String, repository: URL) async throws -> String {
+    static func improve(prompt: String, repository: URL, modelId: String = "") async throws -> String {
         guard let droidPath = findDroid() else {
             throw DroidRunnerError.droidNotFound
         }
@@ -101,12 +102,16 @@ struct DroidRunner {
         process.executableURL = URL(fileURLWithPath: droidPath)
         // Default autonomy is read-only, which is exactly right: droid may
         // scan the repository but never modify it.
-        process.arguments = [
+        var arguments = [
             "exec",
             "--cwd", repository.path,
             "-o", "json",
             "-f", promptFile.path,
         ]
+        if !modelId.isEmpty {
+            arguments += ["-m", modelId]
+        }
+        process.arguments = arguments
         process.currentDirectoryURL = repository
 
         var environment = ProcessInfo.processInfo.environment
@@ -136,14 +141,39 @@ struct DroidRunner {
         async let stdoutData = readToEnd(stdoutPipe)
         async let stderrData = readToEnd(stderrPipe)
 
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            process.terminationHandler = { _ in continuation.resume() }
+        // Cancelling the surrounding task must kill the child, otherwise a
+        // cancelled improvement keeps droid running (and billing) invisibly.
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                let resumed = OSAllocatedUnfairLock(initialState: false)
+                let resumeOnce = {
+                    let isFirst = resumed.withLock { done -> Bool in
+                        if done { return false }
+                        done = true
+                        return true
+                    }
+                    if isFirst { continuation.resume() }
+                }
+                process.terminationHandler = { _ in resumeOnce() }
+                // The handler is not called if the process already exited
+                // before it was installed, so check once ourselves.
+                if !process.isRunning { resumeOnce() }
+            }
+        } onCancel: {
+            process.terminate()
         }
 
         let stdout = String(decoding: await stdoutData, as: UTF8.self)
         let stderr = String(decoding: await stderrData, as: UTF8.self)
 
+        try Task.checkCancellation()
+
         guard process.terminationStatus == 0 else {
+            if stderr.contains("Model blocked by organization policy") {
+                throw DroidRunnerError.executionFailed(
+                    exitCode: process.terminationStatus,
+                    stderr: "This model is blocked by organization policy. Pick a different model.")
+            }
             throw DroidRunnerError.executionFailed(
                 exitCode: process.terminationStatus, stderr: stderr)
         }
