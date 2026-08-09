@@ -7,8 +7,9 @@ REPO_ROOT="$PWD"
 APP_NAME="PromptImprover"
 DIST="$REPO_ROOT/dist"
 APP="$DIST/$APP_NAME.app"
-ZIP="$DIST/$APP_NAME-1.0.0.zip"
-DMG="$DIST/$APP_NAME-1.0.0.dmg"
+VERSION="1.0.1"
+ZIP="$DIST/$APP_NAME-$VERSION.zip"
+DMG="$DIST/$APP_NAME-$VERSION.dmg"
 
 SIGN_IDENTITY="Developer ID Application: Nikhil Anand (NW6B3R27LQ)"
 APPLE_ID="nik.anand.1998@gmail.com"
@@ -41,9 +42,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.1</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
@@ -78,6 +79,10 @@ echo "==> Stapling notarization ticket to .app..."
 xcrun stapler staple "$APP"
 
 echo "==> Creating DMG..."
+STAGE="$DIST/dmg-stage"
+rm -rf "$STAGE"
+mkdir -p "$STAGE"
+cp -R "$APP" "$STAGE/"
 create-dmg \
     --volname "Prompt Improver" \
     --window-pos 200 120 \
@@ -88,10 +93,11 @@ create-dmg \
     --app-drop-link 425 190 \
     --no-internet-enable \
     "$DMG" \
-    "$DIST" || {
+    "$STAGE" || {
         echo "create-dmg exited with code $?, checking DMG..."
         test -f "$DMG"
     }
+rm -rf "$STAGE"
 
 echo "==> Signing DMG..."
 codesign --force --sign "$SIGN_IDENTITY" --timestamp "$DMG"

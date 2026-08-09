@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#020202"/>
+
+  <!-- Slab: larger, near-square corners -->
+  <rect x="176" y="176" width="672" height="672" rx="22" ry="22"
+        fill="#0A0A0A" stroke="#EEEEEE" stroke-width="28"/>
+
+  <!-- Orange index -->
+  <rect x="268" y="280" width="64" height="64" rx="4" ry="4" fill="#EE6018"/>
+
+  <!-- Prompt lines: thicker for small sizes -->
+  <rect x="268" y="404" width="440" height="28" rx="3" fill="#EEEEEE"/>
+  <rect x="268" y="468" width="340" height="28" rx="3" fill="#EEEEEE"/>
+  <rect x="268" y="532" width="220" height="28" rx="3" fill="#EEEEEE"/>
+</svg>
