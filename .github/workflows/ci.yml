@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: lint / build / test / coverage
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Install SwiftLint
+        run: |
+          if command -v swiftlint >/dev/null 2>&1; then
+            echo "swiftlint already installed: $(swiftlint version)"
+          else
+            brew update
+            brew install swiftlint
+          fi
+          swiftlint version
+
+      - name: Lint
+        run: swiftlint lint --strict
+
+      - name: Build
+        run: swift build
+
+      - name: Test with coverage
+        run: swift test --enable-code-coverage
+
+      - name: Coverage threshold check
+        run: |
+          if [ -x ./Scripts/check-coverage.sh ]; then
+            ./Scripts/check-coverage.sh --no-build
+          elif [ -f ./Scripts/check-coverage.sh ]; then
+            bash ./Scripts/check-coverage.sh --no-build
+          else
+            echo "No coverage threshold script found — skipping threshold enforcement."
+            echo "Coverage data is still generated via --enable-code-coverage."
+          fi

@@ -10,6 +10,11 @@ let package = Package(
         .executableTarget(
             name: "PromptImprover",
             path: "Sources/PromptImprover"
+        ),
+        .testTarget(
+            name: "PromptImproverTests",
+            dependencies: ["PromptImprover"],
+            path: "Tests/PromptImproverTests"
         )
     ]
 )
