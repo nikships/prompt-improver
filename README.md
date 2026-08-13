@@ -52,11 +52,23 @@ Download the latest signed and notarized `PromptImprover.dmg` from [Releases](..
 
 ## Development — Setup (clone to running)
 
+### Single-command setup
+
+```sh
+git clone git@github.com:nikships/prompt-improver.git
+cd prompt-improver
+./Scripts/setup.sh
+# or: make setup
+```
+
+The setup script verifies tool prerequisites (Swift, SwiftLint, droid CLI), sets up git hooks, builds the package, and runs the test suite with coverage verification.
+
+### Step-by-step setup
+
 ```sh
 # 1. Clone
 git clone git@github.com:nikships/prompt-improver.git
 cd prompt-improver
-# or: git clone https://github.com/nikships/prompt-improver.git
 
 # 2. Build
 swift build
@@ -64,14 +76,13 @@ swift build
 # 3. Run (debug)
 swift run
 
-# 4. Test
-swift test
+# 4. Test & Coverage
+swift test --enable-code-coverage
+./Scripts/check-coverage.sh
 
-# 5. Lint (one-time install, then lint)
+# 5. Lint
 brew install swiftlint
-swiftlint
-# or explicitly:
-swiftlint lint
+swiftlint lint --strict
 ```
 
 Every command above is also run in CI — keep `swift build`, `swift test`, and `swiftlint` green before pushing.
