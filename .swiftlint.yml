@@ -1,4 +1,5 @@
 excluded:
+  - .foundry-worktrees
   - .agents
   - .build
   - .swiftpm
