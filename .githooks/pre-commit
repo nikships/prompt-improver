@@ -1,0 +1,18 @@
+#!/bin/sh
+# Fallback git hook — runs swiftlint and blocks commit on failure.
+# Primary path is `pre-commit install` via .pre-commit-config.yaml; this file
+# is used when pre-commit framework is not installed (via Scripts/install-hooks.sh).
+set -eu
+
+if ! command -v swiftlint >/dev/null 2>&1; then
+  echo "swiftlint not found — skipping lint (install via: brew install swiftlint)" >&2
+  exit 0
+fi
+
+echo "Running swiftlint lint --strict..." >&2
+swiftlint lint --strict
+status=$?
+if [ $status -ne 0 ]; then
+  echo "swiftlint failed — commit blocked. Fix issues and retry." >&2
+  exit $status
+fi

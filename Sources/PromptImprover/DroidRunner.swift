@@ -30,7 +30,7 @@ enum DroidRunnerError: LocalizedError {
 /// improved prompt produced by the model.
 struct DroidRunner {
 
-    private static let improvementInstructions = """
+    static let improvementInstructions = """
     You are a prompt engineer. Your job is to rewrite the user's draft prompt into a single, \
     polished, ready-to-use prompt for an AI coding agent working in this repository.
 
@@ -62,7 +62,7 @@ struct DroidRunner {
             "\(home)/.npm-global/bin/droid",
             "\(home)/.local/bin/droid",
             "/opt/homebrew/bin/droid",
-            "/usr/local/bin/droid",
+            "/usr/local/bin/droid"
         ]
         for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
             return path
@@ -106,7 +106,7 @@ struct DroidRunner {
             "exec",
             "--cwd", repository.path,
             "-o", "json",
-            "-f", promptFile.path,
+            "-f", promptFile.path
         ]
         if !modelId.isEmpty {
             arguments += ["-m", modelId]
@@ -120,7 +120,7 @@ struct DroidRunner {
             "\(home)/.npm-global/bin",
             "\(home)/.local/bin",
             "/opt/homebrew/bin",
-            "/usr/local/bin",
+            "/usr/local/bin"
         ]
         let basePath = environment["PATH"] ?? "/usr/bin:/bin"
         environment["PATH"] = (extraPaths + [basePath]).joined(separator: ":")
@@ -192,7 +192,7 @@ struct DroidRunner {
 
     /// `-o json` emits a single terminal object with a `result` key; the
     /// streaming format uses `finalText` instead, so accept both.
-    private static func parseResult(from stdout: String) throws -> String {
+    static func parseResult(from stdout: String) throws -> String {
         let trimmed = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw DroidRunnerError.emptyResult }
 

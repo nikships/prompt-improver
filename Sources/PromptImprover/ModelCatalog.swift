@@ -13,10 +13,10 @@ enum ModelCatalog {
 
     // Factory built-in models available to every install; custom models from
     // settings.json are appended after these.
-    private static let builtinModels: [ModelOption] = [
+    static let builtinModels: [ModelOption] = [
         ModelOption(id: "claude-opus-5", displayName: "Claude Opus 5"),
         ModelOption(id: "claude-sonnet-5", displayName: "Claude Sonnet 5"),
-        ModelOption(id: "gpt-5.3-codex", displayName: "GPT-5.3 Codex"),
+        ModelOption(id: "gpt-5.3-codex", displayName: "GPT-5.3 Codex")
     ]
 
     static func load() -> [ModelOption] {
@@ -26,9 +26,12 @@ enum ModelCatalog {
         return options
     }
 
-    private static func customModels() -> [ModelOption] {
-        let settingsURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".factory/settings.json")
+    static func customModels() -> [ModelOption] {
+        customModels(from: FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".factory/settings.json"))
+    }
+
+    static func customModels(from settingsURL: URL) -> [ModelOption] {
         guard let data = try? Data(contentsOf: settingsURL),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let custom = root["customModels"] as? [[String: Any]]
