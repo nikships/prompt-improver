@@ -39,15 +39,40 @@ if [[ ! -f "$PROFDATA" ]]; then
 fi
 if [[ -z "${PROFDATA:-}" || ! -f "$PROFDATA" ]]; then
   echo "error: profdata not found. Run 'swift test --enable-code-coverage' first." >&2
+  find .build -name "*.profdata" 2>/dev/null | head -20 >&2 || true
+  find .build -name "*.profraw" 2>/dev/null | head -20 >&2 || true
   exit 2
 fi
 
+# SwiftPM 6.3 vs 6.4 vs new-build-system puts the test binary in different
+# subtrees (.build/debug vs .build/out/Products/Debug vs .build/<triple>/debug)
+# and Swift Testing (Xcode 16 / macOS 26) names the aggregate bundle
+# PromptImproverPackageTests rather than PromptImproverTests. Try known
+# candidates first, then fall back to a broad find.
 TEST_BIN=".build/out/Products/Debug/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests"
 if [[ ! -f "$TEST_BIN" ]]; then
-  TEST_BIN="$(find .build -path "*/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests" -print -quit 2>/dev/null || true)"
+  for alt in \
+    ".build/debug/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests" \
+    ".build/arm64-apple-macosx/debug/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests" \
+    ".build/out/Products/Debug/PromptImproverPackageTests.xctest/Contents/MacOS/PromptImproverPackageTests" \
+    ".build/debug/PromptImproverPackageTests.xctest/Contents/MacOS/PromptImproverPackageTests" \
+    ".build/arm64-apple-macosx/debug/PromptImproverPackageTests.xctest/Contents/MacOS/PromptImproverPackageTests"; do
+    if [[ -f "$alt" ]]; then TEST_BIN="$alt"; break; fi
+  done
+fi
+if [[ ! -f "$TEST_BIN" ]]; then
+  TEST_BIN="$(find .build -type f -path "*xctest/Contents/MacOS/*PromptImprover*" -print -quit 2>/dev/null || true)"
+fi
+if [[ ! -f "$TEST_BIN" ]]; then
+  TEST_BIN="$(find .build -type f -path "*xctest/Contents/MacOS/*" -print -quit 2>/dev/null || true)"
 fi
 if [[ -z "$TEST_BIN" || ! -f "$TEST_BIN" ]]; then
-  echo "error: coverage test binary not found" >&2; exit 2
+  echo "error: coverage test binary not found" >&2
+  echo "  searched under .build — xctest bundles:" >&2
+  find .build -type d -name "*.xctest" 2>/dev/null | head -20 >&2 || true
+  echo "  candidate binaries:" >&2
+  find .build -type f -path "*xctest/Contents/MacOS/*" 2>/dev/null | head -20 >&2 || true
+  exit 2
 fi
 
 echo "==> profdata: $PROFDATA"
