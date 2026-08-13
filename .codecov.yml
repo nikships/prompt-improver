@@ -1,0 +1,15 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 20%
+        threshold: 1%
+    patch:
+      default:
+        target: 20%
+
+ignore:
+  - ".agents/**/*"
+  - ".build/**/*"
+  - ".swiftpm/**/*"
+  - "dist/**/*"

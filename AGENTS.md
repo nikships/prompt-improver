@@ -45,9 +45,19 @@ This is a single-package repo, not a monorepo — root `AGENTS.md` is authoritat
 
 ## Commands
 
-All commands run from the repo root.
+All commands run from the repo root. `make` shortcuts are provided in `Makefile`.
 
 ### Setup (clone to running)
+
+Single-command setup (checks prerequisites, installs git hooks, builds package, runs tests and verifies coverage):
+
+```sh
+./Scripts/setup.sh
+# or via make:
+make setup
+```
+
+Manual clone-to-running sequence:
 
 ```sh
 git clone git@github.com:nikships/prompt-improver.git
@@ -59,44 +69,56 @@ swift run
 ### Build
 
 ```sh
-swift build                 # debug build
-swift build -c release      # release binary at .build/release/PromptImprover
-./Scripts/build-app.sh      # assemble dist/PromptImprover.app (release build + Info.plist + ad-hoc sign)
+swift build                 # debug build (or: make build)
+swift build -c release      # release binary at .build/release/PromptImprover (or: make build-release)
+./Scripts/build-app.sh      # assemble dist/PromptImprover.app (or: make app)
+```
+
+### Typecheck
+
+Swift is a statically typed, compiled language. Type checking is performed by the Swift compiler during build and test:
+
+```sh
+swift build                 # compile and typecheck package targets
+swift test                  # compile and typecheck package and test targets
 ```
 
 ### Run
 
 ```sh
-swift run                   # run debug build directly
-open dist/PromptImprover.app  # after build-app.sh
+swift run                   # run debug build directly (or: make run)
+open dist/PromptImprover.app  # launch assembled app (after ./Scripts/build-app.sh)
 ```
 
-### Test
+### Test and Coverage
 
 ```sh
-swift test                              # run tests (if any)
-swift test --enable-code-coverage       # with coverage; emits .build/.../codecov/*.json
+swift test                              # run tests (or: make test)
+swift test --enable-code-coverage       # with coverage; emits default.profdata
+./Scripts/check-coverage.sh             # build, test, and enforce coverage thresholds (or: make coverage)
+./Scripts/check-coverage.sh --no-build  # verify existing profdata only
 ```
 
-Coverage is via SwiftPM + llvm-cov. To view a summary if `xccov`/`llvm-cov` is available:
+Enforced coverage thresholds (`Scripts/check-coverage.sh` / `.codecov.yml`):
+- `ModelCatalog.swift`: >= **90%** (currently 100%)
+- `TOTAL` (test binary, Sources + Tests): >= **20%** (currently ~26%)
+
+To inspect coverage manually with llvm-cov:
 
 ```sh
-swift test --enable-code-coverage
-xcrun llvm-cov report .build/debug/PromptImproverPackageTests.xctest/Contents/MacOS/PromptImproverPackageTests \
-  -instr-profile .build/debug/codecov/default.profdata 2>/dev/null || \
-  xcrun xccov view --report .build 2>/dev/null || echo "Install Xcode CLI tools for coverage reports"
+TEST_BIN=.build/out/Products/Debug/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests
+PROF=.build/out/Products/Debug/codecov/default.profdata
+xcrun llvm-cov report "$TEST_BIN" -instr-profile="$PROF"
+xcrun llvm-cov show "$TEST_BIN" -instr-profile="$PROF" Sources/PromptImprover/ModelCatalog.swift
 ```
-
-If `Scripts/coverage-check.sh` exists (CI checks for it), prefer it: `./Scripts/coverage-check.sh` (or `bash ./Scripts/coverage-check.sh` if not executable).
 
 ### Lint / Format
 
 ```sh
-brew install swiftlint        # one-time
-swiftlint                     # lint (uses .swiftlint.yml if present; else default rules)
-swiftlint lint                # explicit subcommand, same as above
-swiftlint lint --strict       # CI mode: warnings become errors
-swiftlint --fix               # auto-fix correctable violations (review diff)
+brew install swiftlint        # one-time install
+swiftlint                     # lint (or: make lint, uses .swiftlint.yml)
+swiftlint lint --strict       # CI mode: warnings become errors (or: make lint)
+swiftlint --fix               # auto-fix correctable violations (or: make format)
 ```
 
 No SwiftFormat config is present; SwiftLint is the canonical linter. CI runs `swiftlint lint --strict`.
