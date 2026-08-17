@@ -1,6 +1,19 @@
-.build/
-.swiftpm/
-.DS_Store
+# Dependencies
+node_modules/
+
+# Build and packaging output
+out/
 dist/
+coverage/
+
+# OS and editor files
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Foundry / Agent artifacts
 .agents/
 .foundry-worktrees/
+.factory/

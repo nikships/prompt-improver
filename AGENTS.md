@@ -1,55 +1,97 @@
+<coding_guidelines>
 # AGENTS.md — Prompt Improver
 
 ## Project overview
 
-Prompt Improver is a native macOS SwiftUI app (macOS 14+) that turns rough draft prompts into polished, repository-grounded prompts. It does this by running Factory's `droid exec` in read-only mode inside a user-selected repository — droid does a fast shallow scan (README, top-level structure, manifests) and rewrites the draft into a final prompt with correct stack terminology, UX/coding guidance, and actionable acceptance criteria.
+Prompt Improver is a native macOS Electron app (macOS 14+) built with React and TypeScript, powered by Factory's `@factory/droid-sdk`. It turns rough draft prompts into polished, repository-grounded prompts through an interactive multi-turn agent conversation.
 
-- SwiftPM executable package (`Package.swift`, swift-tools-version 5.10)
-- Single target: `PromptImprover` at `Sources/PromptImprover/`
-- No external Swift dependencies; wraps the `droid` CLI at runtime
-- App bundle assembled by `Scripts/build-app.sh` into `dist/PromptImprover.app`
-- Release packaging (sign + notarize + DMG) via `Scripts/release-package.sh` (contains hardcoded Apple credentials — do not log or commit secrets)
+The agent performs a shallow read-only scan of the selected repository, asks clarifying questions using the `AskUser` tool, and uses the answers to produce a ready-to-use prompt with correct stack terminology, UX/coding patterns, and actionable acceptance criteria.
+
+- Electron desktop app with sandboxed React TypeScript renderer and Node main process
+- Droid integration via `@factory/droid-sdk/node` using in-process `createSession` and streaming
+- Interactive `askUserHandler` parked over typed IPC and rendered as a one-question-at-a-time questionnaire
+- App bundled and packaged with `electron-vite` and `electron-builder`
 - Default git branch is `master`
 
 ## Structure
 
 ```
 .
-├── Package.swift                     # SwiftPM executable, platforms: .macOS(.v14)
-├── Sources/PromptImprover/
-│   ├── PromptImproverApp.swift       # App entry point
-│   ├── ContentView.swift             # Main UI (OLED dark theme)
-│   ├── Theme.swift                   # Design tokens / colors
-│   ├── LogoView.swift                # Factory branding + logo
-│   ├── DroidRunner.swift             # `droid exec` integration, cancellation, JSON parsing
-│   └── ModelCatalog.swift            # Model picker (reads ~/.factory/settings.json)
-├── Resources/
-│   ├── AppIcon.icns                  # App icon
-│   └── entitlements.plist            # Hardened runtime entitlements (release signing)
-├── Scripts/
-│   ├── build-app.sh                  # Assembles dist/PromptImprover.app (debug/release)
-│   └── release-package.sh            # Full sign/notarize/DMG pipeline (requires Apple creds)
-├── docs/assets/                      # README assets (logo, app-icon, screenshot)
-└── .github/                          # PR and issue templates
+├── electron.vite.config.ts           # electron-vite build & dev configuration
+├── electron-builder.yml              # macOS app packaging configuration
+├── package.json                      # npm package & dependencies
+├── tsconfig.json                     # TypeScript configuration
+├── eslint.config.js                  # ESLint configuration
+├── vitest.config.ts                  # Vitest test and coverage configuration
+├── src/
+│   ├── main/                         # Electron main process (Node)
+│   │   ├── main.ts                   # Window lifecycle & app initialization
+│   │   ├── ipc.ts                    # Typed IPC handlers & state push
+│   │   ├── env.ts                    # Login-shell PATH resolution
+│   │   ├── prefs.ts                  # Preferences persistence (repo, model, reasoning)
+│   │   ├── models.ts                 # Model catalog (builtins + ~/.factory/settings.json)
+│   │   └── droid/
+│   │       ├── session.ts            # DroidSession runner, streaming, state machine, cancel
+│   │       ├── ask-user.ts           # AskUser request parser, park/resume, answer validator
+│   │       ├── permissions.ts        # Read-only permission handler
+│   │       ├── prompt.ts             # Two-phase prompt engineering instructions
+│   │       └── find-droid.ts         # Droid CLI binary locator
+│   ├── preload/
+│   │   └── bridge.ts                 # Sandboxed contextBridge API for renderer
+│   ├── shared/
+│   │   ├── types.ts                  # Shared state, ask, model, and prefs types
+│   │   └── ipc-contract.ts           # IPC channels and ImproverApi interface
+│   └── renderer/                     # React UI (sandboxed)
+│       ├── index.html                # App HTML entry point
+│       ├── main.tsx                  # React DOM root
+│       ├── App.tsx                   # Screen router (compose -> session -> result)
+│       ├── store/
+│       │   └── improver.tsx          # Live state store & action hooks
+│       ├── screens/
+│       │   ├── ComposeScreen.tsx     # Screen 1: Draft input, repo picker, model/reasoning
+│       │   ├── SessionScreen.tsx     # Screen 2: Scanning activity & interactive Questionnaire
+│       │   └── ResultScreen.tsx      # Screen 3: Improved prompt, copy, draft-use, Q&A recap
+│       ├── components/
+│       │   ├── Logo.tsx              # Factory logo & Droid glyph SVGs
+│       │   ├── SectionLabel.tsx      # Uppercase mono section labels (e.g. "01 / DRAFT")
+│       │   ├── RepoPicker.tsx        # Folder selector & drop target chip
+│       │   ├── ModelSelect.tsx       # Model dropdown selector
+│       │   ├── ReasoningSelect.tsx   # Reasoning effort dropdown selector
+│       │   ├── Questionnaire.tsx     # One-at-a-time wizard with single/multi/custom answers
+│       │   ├── QuestionCard.tsx      # Question card with keyboard shortcuts (1-9, enter)
+│       │   ├── ActivityStack.tsx     # Live quiet tool activity stack
+│       │   ├── ErrorBanner.tsx       # Danger error banner with retry/edit actions
+│       │   └── ui/Button.tsx         # Primary, ghost, and accent styled buttons
+│       └── styles/
+│           ├── tokens.css            # Factory OLED design tokens
+│           └── global.css            # Global typography and base styles
+├── tests/                            # Unit & integration test suites
+│   ├── ask-user.test.ts              # AskUser payload parser and answer completion tests
+│   ├── permissions.test.ts           # Read-only permission validation tests
+│   ├── models.test.ts                # Model catalog & settings.json tests
+│   ├── prefs.test.ts                 # Preferences persistence tests
+│   ├── session.test.ts               # Multi-turn session & AskUser mock runner tests
+│   ├── find-droid.test.ts            # Droid CLI discovery tests
+│   └── env.test.ts                   # Environment PATH resolution tests
+├── assets/                           # App icons and packaging resources
+├── docs/assets/                      # README logos and screenshots
+└── Scripts/
+    ├── setup.sh                      # Single-command setup and prerequisites check
+    └── install-hooks.sh              # Git hooks installer
 ```
-
-This is a single-package repo, not a monorepo — root `AGENTS.md` is authoritative. No nested `AGENTS.md` is needed under `Sources/`.
 
 ## Environment requirements
 
-- **macOS 14+** (LSMinimumSystemVersion 14.0, built against macOS 14 SDK)
-- **Xcode 15+** (provides Swift 5.10 toolchain; CLI tools must be selected: `xcode-select -p`)
-- **Swift 5.10+** (`swift --version`)
-- **droid CLI** installed and authenticated (`droid --version`, `droid auth status` or `droid exec --help`). App locates `droid` via `~/.npm-global/bin/droid`, `~/.local/bin/droid`, `/opt/homebrew/bin/droid`, `/usr/local/bin/droid`, then `command -v droid` in a login shell.
-- **SwiftLint** (optional but required for lint CI): `brew install swiftlint`
+- **macOS 14+** (Sonoma or newer)
+- **Node.js 20+ or 22+** (`node --version`)
+- **npm 10+** (`npm --version`)
+- **droid CLI** installed and authenticated (`droid --version`, `droid auth status`)
 
 ## Commands
 
-All commands run from the repo root. `make` shortcuts are provided in `Makefile`.
+All commands run from repo root. `make` shortcuts are provided in `Makefile`.
 
-### Setup (clone to running)
-
-Single-command setup (checks prerequisites, installs git hooks, builds package, runs tests and verifies coverage):
+### Setup
 
 ```sh
 ./Scripts/setup.sh
@@ -57,106 +99,61 @@ Single-command setup (checks prerequisites, installs git hooks, builds package, 
 make setup
 ```
 
-Manual clone-to-running sequence:
+### Development
 
 ```sh
-git clone git@github.com:nikships/prompt-improver.git
-cd prompt-improver
-swift build
-swift run
-```
-
-### Build
-
-```sh
-swift build                 # debug build (or: make build)
-swift build -c release      # release binary at .build/release/PromptImprover (or: make build-release)
-./Scripts/build-app.sh      # assemble dist/PromptImprover.app (or: make app)
+npm run dev                 # launch app in development mode with HMR (or: make dev)
 ```
 
 ### Typecheck
 
-Swift is a statically typed, compiled language. Type checking is performed by the Swift compiler during build and test:
-
 ```sh
-swift build                 # compile and typecheck package targets
-swift test                  # compile and typecheck package and test targets
-```
-
-### Run
-
-```sh
-swift run                   # run debug build directly (or: make run)
-open dist/PromptImprover.app  # launch assembled app (after ./Scripts/build-app.sh)
+npm run typecheck           # run TypeScript compiler typecheck (or: make typecheck)
 ```
 
 ### Test and Coverage
 
 ```sh
-swift test                              # run tests (or: make test)
-swift test --enable-code-coverage       # with coverage; emits default.profdata
-./Scripts/check-coverage.sh             # build, test, and enforce coverage thresholds (or: make coverage)
-./Scripts/check-coverage.sh --no-build  # verify existing profdata only
+npm test                    # run unit test suite (or: make test)
+npm run test:coverage       # run tests with v8 code coverage enforcement (or: make coverage)
 ```
 
-Enforced coverage thresholds (`Scripts/check-coverage.sh` / `.codecov.yml`):
-- `ModelCatalog.swift`: >= **90%** (currently 100%)
-- `TOTAL` (test binary, Sources + Tests): >= **20%** (currently ~26%)
-
-To inspect coverage manually with llvm-cov:
-
-```sh
-TEST_BIN=.build/out/Products/Debug/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests
-PROF=.build/out/Products/Debug/codecov/default.profdata
-xcrun llvm-cov report "$TEST_BIN" -instr-profile="$PROF"
-xcrun llvm-cov show "$TEST_BIN" -instr-profile="$PROF" Sources/PromptImprover/ModelCatalog.swift
-```
+Enforced coverage threshold:
+- Lines coverage >= **80%** on `src/main/**` core logic
 
 ### Lint / Format
 
 ```sh
-brew install swiftlint        # one-time install
-swiftlint                     # lint (or: make lint, uses .swiftlint.yml)
-swiftlint lint --strict       # CI mode: warnings become errors (or: make lint)
-swiftlint --fix               # auto-fix correctable violations (or: make format)
+npm run lint                # run ESLint with strict zero-warnings (or: make lint)
+npm run lint:fix            # automatically fix lint formatting issues (or: make format)
 ```
 
-No SwiftFormat config is present; SwiftLint is the canonical linter. CI runs `swiftlint lint --strict`.
-
-### Release (maintainers only)
+### Full Verification Check
 
 ```sh
-./Scripts/release-package.sh  # build, sign, notarize, DMG — requires Developer ID + Apple notary creds
+npm run check               # runs typecheck, lint, test, and build (or: make check)
 ```
 
-Do not run on CI or log its output; it contains hardcoded secrets pending rotation to env vars.
+### Packaging / Distribution
 
-## Conventions
+```sh
+npm run package             # builds and packages macOS arm64 DMG and ZIP (or: make package)
+```
 
-- **Swift / SwiftUI**: Target macOS 14, Swift 5.10. Prefer value types, `async/await`, and `ObservableObject`/`@State` as in `ContentView.swift`. Keep UI in `ContentView`/`Theme`/`LogoView`, process logic in `DroidRunner`.
-- **Droid integration**: `DroidRunner` shells out to `droid exec --cwd <repo> -o json -f <promptFile> [-m <model>]`. It injects extra PATH entries and drains stdout/stderr concurrently to avoid deadlock. Cancellation must terminate the child process (`process.terminate()` in `withTaskCancellationHandler`). JSON parsing accepts both `result` and `finalText` keys and surfaces `is_error` as `DroidRunnerError`.
-- **Error handling**: Use `LocalizedError` with user-facing `errorDescription` (see `DroidRunnerError`). Surface stderr trimmed, handle "Model blocked by organization policy" specially.
-- **No environment files**: No `.env` / `.env.example` — `droid` auth is external (login via `droid` CLI). `DroidRunner` only manipulates `PATH` in-process; no secrets in repo.
-- **Signing**: `build-app.sh` uses ad-hoc signing (`codesign --sign -`); `release-package.sh` uses Developer ID + hardened runtime + entitlements. Do not change bundle ID `ai.factory.promptimprover` without updating both scripts.
-- **Linting**: Fix SwiftLint violations rather than disabling. Never add `// swiftlint:disable` without prior approval.
-- **Commits**: Keep diffs focused; run `swift build` and `swiftlint` before pushing.
+## Architecture & Conventions
 
-## PR guidance
-
-- Base branch: `master`.
-- Title: concise, imperative ("Add model picker persistence", not "Added...").
-- Include: **Summary** (what/why), **Testing** (commands run + manual steps), **Checklist**, and **Screenshots** for any UI change (before/after, light/dark if relevant).
-- Before opening:
-  ```sh
-  swift build
-  swift test
-  swiftlint
-  ./Scripts/build-app.sh   # if touching app bundle, resources, or Info.plist
-  ```
-- Do not include `dist/`, `.build/`, `.swiftpm/`, or `.DS_Store` in PRs (see `.gitignore`).
-- Do not create or commit `.agents/agent-ready.json`.
-- Attach PR link to Linear issue when applicable: `orca linear attach --current --url <pr-url> --title "PR link" --json`.
-
-## Monorepo hierarchy
-
-N/A — single SwiftPM package. Root `AGENTS.md` is sufficient; no nested agents files.
+- **Main Process (`src/main`)**:
+  - Direct integration with `@factory/droid-sdk/node` using `createSession`.
+  - Permissions strictly enforce read-only execution: `Read`, `Grep`, `Glob`, `LS`, `AskUser`, `TodoWrite` are allowed; modifying tools (`Execute`, `Create`, `Edit`, `ApplyPatch`) are blocked.
+  - Interactive `askUserHandler` parks the request, notifies renderer via `improver:state`, and resolves when the user submits answers.
+  - Session cancellation interrupts and closes the SDK session immediately.
+  - Preferences persist last repository, selected model, and reasoning effort.
+- **Renderer (`src/renderer`)**:
+  - Sandboxed React application communicating with main only via typed `window.improver` bridge.
+  - Three-screen flow:
+    1. **Compose**: Draft editor, repository selector (with folder drag-and-drop), model and reasoning pickers. No empty output pane.
+    2. **Session**: Top context bar, live activity stack during scanning, one-question-at-a-time questionnaire during `asking` phase.
+    3. **Result**: Final ready-to-use prompt, one-click copy, use-as-draft, new prompt, and collapsible Q&A recap.
+- **Styling**: Factory OLED theme (`#020202` background, `#0A0A0A` surface, `#101010` raised surface, `#EE6018` Factory orange accent, monospace uppercase labels).
+- **Security**: Sandboxing enabled, context isolation enabled, node integration disabled, no hardcoded API keys or credentials.
+</coding_guidelines>

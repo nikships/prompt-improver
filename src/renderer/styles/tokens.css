@@ -1,0 +1,17 @@
+:root {
+  --bg: #020202;
+  --surface: #0a0a0a;
+  --surface-raised: #101010;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #eeeeee;
+  --text-2: #8c8c8c;
+  --text-3: rgba(255, 255, 255, 0.32);
+  --accent: #ee6018;
+  --accent-bright: #ef6f2e;
+  --danger: #ef4444;
+  --radius: 3px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Mono', 'Courier New', monospace;
+}

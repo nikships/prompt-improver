@@ -1,5 +1,0 @@
-.agents/
-.agents/agent-ready.json
-.build/
-.swiftpm/
-dist/

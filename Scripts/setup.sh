@@ -1,61 +1,44 @@
 #!/usr/bin/env bash
-# setup.sh — Single-command project setup for Prompt Improver.
-# Verifies environment prerequisites, installs git hooks, builds the package,
-# and runs the test suite with coverage verification.
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO_ROOT"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
-echo "==> [1/4] Checking prerequisites..."
+echo "=== Prompt Improver Setup ==="
 
-# 1. macOS check
-if [[ "$(uname)" != "Darwin" ]]; then
-  echo "warning: Prompt Improver is a native macOS app (macOS 14+ recommended)."
-fi
-
-# 2. Swift check
-if ! command -v swift >/dev/null 2>&1; then
-  echo "error: Swift toolchain not found. Install Xcode 15+ or Xcode Command Line Tools: xcode-select --install" >&2
+# Check Node.js
+if ! command -v node >/dev/null 2>&1; then
+  echo "Error: Node.js is required (v20+ or v22+ recommended). Install via brew or nvm." >&2
   exit 1
 fi
-echo "    Swift: $(swift --version | head -1)"
+echo "Node: $(node --version)"
 
-# 3. SwiftLint check (optional for running, required for linting in CI)
-if command -v swiftlint >/dev/null 2>&1; then
-  echo "    SwiftLint: $(swiftlint version)"
-else
-  echo "    SwiftLint: not found (install via 'brew install swiftlint' for lint checks)"
+# Check npm
+if ! command -v npm >/dev/null 2>&1; then
+  echo "Error: npm is required." >&2
+  exit 1
 fi
+echo "npm: $(npm --version)"
 
-# 4. droid CLI check (runtime integration)
+# Check droid CLI
 if command -v droid >/dev/null 2>&1; then
-  echo "    droid CLI: found at $(command -v droid)"
+  echo "droid CLI: $(droid --version 2>/dev/null || echo 'installed')"
 else
-  echo "    droid CLI: not found in current PATH (install via https://docs.factory.ai)"
+  echo "Warning: 'droid' CLI not found on PATH. Prompt Improver will look in standard locations at runtime." >&2
 fi
 
-echo "==> [2/4] Setting up git hooks..."
-if [[ -x "./Scripts/install-hooks.sh" ]]; then
-  ./Scripts/install-hooks.sh
-elif [[ -f "./Scripts/install-hooks.sh" ]]; then
+# Install npm dependencies
+echo "Installing dependencies..."
+npm install
+
+# Install git hooks
+if [ -f "./Scripts/install-hooks.sh" ]; then
+  echo "Installing git hooks..."
   bash ./Scripts/install-hooks.sh
 fi
 
-echo "==> [3/4] Building Swift package..."
-swift build
+# Run check
+echo "Running verification checks..."
+npm run check
 
-echo "==> [4/4] Running tests and verifying coverage..."
-if [[ -x "./Scripts/check-coverage.sh" ]]; then
-  ./Scripts/check-coverage.sh
-elif [[ -f "./Scripts/check-coverage.sh" ]]; then
-  bash ./Scripts/check-coverage.sh
-else
-  swift test --enable-code-coverage
-fi
-
-echo ""
-echo "Setup complete! You can now run the app:"
-echo "  swift run                      # run debug build directly"
-echo "  ./Scripts/build-app.sh         # assemble dist/PromptImprover.app"
-echo "  open dist/PromptImprover.app   # launch assembled app"
+echo "=== Setup complete! Run 'npm run dev' to launch the app. ==="
