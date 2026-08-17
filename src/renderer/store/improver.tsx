@@ -158,6 +158,7 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [state.result, cancelSession]);
 
   const newPrompt = useCallback(() => {
+    setDraftText('');
     cancelSession();
   }, [cancelSession]);
 

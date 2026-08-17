@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseAskUserQuestions,
+  parseQuestionnaireString,
   parkAskUser,
   answersFromUser,
   answersComplete,
@@ -46,7 +47,54 @@ describe('ask-user', () => {
     });
   });
 
+  it('parses questionnaire string format with topics and multi-select', () => {
+    const text = `
+1. [question] Which frontend libraries should we use? (multi)
+[topic] UI-Libraries
+[option] Lucide Icons
+[option] Radix Primitives
+
+2. [question] What database target?
+[topic] Database
+[option] SQLite
+[option] Postgres
+    `;
+
+    const parsed = parseQuestionnaireString(text);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]).toEqual({
+      index: 0,
+      topic: 'UI-LIBRARIES',
+      question: 'Which frontend libraries should we use?',
+      options: ['Lucide Icons', 'Radix Primitives'],
+      multiSelect: true,
+    });
+    expect(parsed[1]).toEqual({
+      index: 1,
+      topic: 'DATABASE',
+      question: 'What database target?',
+      options: ['SQLite', 'Postgres'],
+      multiSelect: false,
+    });
+
+    // Integrated via parseAskUserQuestions
+    const fromParams = parseAskUserQuestions({ questionnaire: text });
+    expect(fromParams).toEqual(parsed);
+  });
+
   it('tolerates missing topic, options, or questions list', () => {
+    const nullParams = null;
+    const parsedNull = parseAskUserQuestions(nullParams);
+    expect(parsedNull).toEqual([
+      {
+        index: 0,
+        topic: 'PROMPT',
+        question: '',
+        options: [],
+        multiSelect: false,
+      },
+    ]);
+
     const emptyParams = {};
     const parsedEmpty = parseAskUserQuestions(emptyParams);
     expect(parsedEmpty).toEqual([

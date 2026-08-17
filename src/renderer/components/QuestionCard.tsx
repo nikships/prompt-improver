@@ -38,8 +38,14 @@ export const QuestionCard: FC<QuestionCardProps> = ({
   // Keyboard shortcut listener for 1-9
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If user is typing in custom input, don't intercept number keys
-      if (document.activeElement === customInputRef.current) {
+      // If user is typing in an input or textarea, don't intercept number keys
+      const target = e.target as HTMLElement | null;
+      if (
+        document.activeElement === customInputRef.current ||
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      ) {
         return;
       }
 

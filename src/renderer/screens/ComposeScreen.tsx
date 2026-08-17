@@ -37,6 +37,11 @@ export const ComposeScreen: FC = () => {
     }
   };
 
+  const handleChooseRepo = async () => {
+    setDropError(null);
+    await chooseRepo();
+  };
+
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -105,7 +110,7 @@ export const ComposeScreen: FC = () => {
         </div>
 
         <div className={styles.controlsRow}>
-          <RepoPicker repoPath={repoPath} onChoose={chooseRepo} />
+          <RepoPicker repoPath={repoPath} onChoose={handleChooseRepo} />
           {dropError && (
             <div style={{ color: 'var(--danger)', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
               {dropError}

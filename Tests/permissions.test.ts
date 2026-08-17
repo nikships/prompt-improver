@@ -23,7 +23,7 @@ describe('permissions', () => {
     expect(isToolAllowed('UnknownTool')).toBe(false);
   });
 
-  it('flattens tool use request params correctly', () => {
+  it('flattens tool use request params correctly and handles empty case', () => {
     const params = {
       toolUses: [
         {
@@ -33,6 +33,7 @@ describe('permissions', () => {
           },
           details: {
             filePath: '/path/to/README.md',
+            command: 'read cmd',
           },
         },
       ],
@@ -42,6 +43,10 @@ describe('permissions', () => {
     const flattened = flattenToolUse(params);
     expect(flattened.toolName).toBe('Read');
     expect(flattened.file_path).toBe('/path/to/README.md');
+    expect(flattened.command).toBe('read cmd');
+
+    const empty = flattenToolUse({} as any);
+    expect(empty.toolName).toBe('');
   });
 
   it('handles permission request for allowed tool', () => {

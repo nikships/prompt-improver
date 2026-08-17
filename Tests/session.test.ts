@@ -287,4 +287,102 @@ describe('session', () => {
     expect(state.pendingAsk).toBeNull();
     vi.restoreAllMocks();
   });
+
+  it('handles ToolProgress with toolName and AssistantTextDelta', async () => {
+    vi.spyOn(findDroidModule, 'findDroid').mockResolvedValue('/mock/bin/droid');
+
+    const mockSession = {
+      id: 'tool-session-id',
+      settings: {} as any,
+      stream: async function* () {
+        yield {
+          type: DroidMessageType.ToolProgress,
+          toolName: 'Grep',
+        };
+        yield {
+          type: DroidMessageType.AssistantTextDelta,
+          delta: 'Thinking...',
+        };
+        yield {
+          type: DroidMessageType.Assistant,
+          text: 'Improved text from assistant message without Result envelope.',
+        };
+      },
+      interrupt: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const mockFactory = vi.fn().mockResolvedValue(mockSession);
+    const manager = new ImproverSessionManager(mockFactory);
+
+    const finalState = await manager.start({
+      draft: 'Build something',
+      repoPath: '/mock/repo',
+      modelId: '',
+      reasoningEffort: 'medium',
+    });
+
+    expect(finalState.phase).toBe('complete');
+    expect(finalState.result).toBe('Improved text from assistant message without Result envelope.');
+    expect(finalState.activity.some((a) => a.text.includes('Running Grep...'))).toBe(true);
+    vi.restoreAllMocks();
+  });
+
+  it('handles Result message with error', async () => {
+    vi.spyOn(findDroidModule, 'findDroid').mockResolvedValue('/mock/bin/droid');
+
+    const mockSession = {
+      id: 'error-msg-id',
+      settings: {} as any,
+      stream: async function* () {
+        yield {
+          type: DroidMessageType.Result,
+          success: false,
+          error: { message: 'Quota exceeded for selected model' },
+        };
+      },
+      interrupt: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const mockFactory = vi.fn().mockResolvedValue(mockSession);
+    const manager = new ImproverSessionManager(mockFactory);
+
+    const finalState = await manager.start({
+      draft: 'Draft needing quota',
+      repoPath: '/mock/repo',
+      modelId: '',
+      reasoningEffort: 'medium',
+    });
+
+    expect(finalState.phase).toBe('failed');
+    expect(finalState.error).toBe('Quota exceeded for selected model');
+    vi.restoreAllMocks();
+  });
+
+  it('handles empty stream ending without output', async () => {
+    vi.spyOn(findDroidModule, 'findDroid').mockResolvedValue('/mock/bin/droid');
+
+    const mockSession = {
+      id: 'empty-session-id',
+      settings: {} as any,
+      stream: async function* () {},
+      interrupt: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const mockFactory = vi.fn().mockResolvedValue(mockSession);
+    const manager = new ImproverSessionManager(mockFactory);
+
+    const finalState = await manager.start({
+      draft: 'Draft with empty response',
+      repoPath: '/mock/repo',
+      modelId: '',
+      reasoningEffort: 'medium',
+    });
+
+    expect(finalState.phase).toBe('failed');
+    expect(finalState.error).toContain('finished without producing');
+    vi.restoreAllMocks();
+  });
 });

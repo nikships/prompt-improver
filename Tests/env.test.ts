@@ -25,9 +25,15 @@ describe('env', () => {
     expect(dirs.some((d) => d.includes('/opt/homebrew/bin'))).toBe(true);
   });
 
-  it('merges paths uniquely preserving order', () => {
-    const merged = mergePath('/usr/bin:/bin', ['/opt/homebrew/bin', '/usr/bin', '/usr/local/bin']);
+  it('merges paths uniquely preserving order and filters empty strings', () => {
+    const merged = mergePath('/usr/bin::/bin: ', ['/opt/homebrew/bin', '/usr/bin', '', '/usr/local/bin']);
     expect(merged).toBe('/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin');
+  });
+
+  it('returns cached resolvedPath immediately if already resolved', async () => {
+    __setResolvedPathForTest('/cached/path:/usr/bin');
+    const path = await resolveEnv();
+    expect(path).toBe('/cached/path:/usr/bin');
   });
 
   it('resolves env from login shell', async () => {
