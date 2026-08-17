@@ -1,4 +1,4 @@
-.PHONY: all setup dev build start test coverage lint format typecheck check package app clean
+.PHONY: all setup dev build start test coverage lint format typecheck check package app release clean
 
 all: build
 
@@ -37,6 +37,9 @@ package:
 
 app:
 	npm run package
+
+release:
+	./Scripts/release-package.sh
 
 clean:
 	rm -rf out dist coverage node_modules
