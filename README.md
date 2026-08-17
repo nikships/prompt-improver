@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  A lightweight native macOS app that turns rough draft prompts into polished,<br>
-  repository-grounded prompts using Factory's <a href="https://docs.factory.ai">droid</a> CLI.
+  A native macOS Electron app that turns rough draft prompts into polished,<br>
+  repository-grounded prompts using Factory's <a href="https://docs.factory.ai">Droid TypeScript SDK</a> and interactive agent questionnaires.
 </p>
 
 <p align="center">
@@ -22,113 +22,51 @@
 
 ## How it works
 
-1. Choose a local repository (or drag & drop a folder anywhere in the window).
-2. Type a draft prompt in the notepad area.
-3. Pick a model (optional; your choice is saved as the default).
-4. Click **Improve** (⌘↩).
-
-The app runs `droid exec` in read-only mode inside the selected repository. Droid does a fast, shallow scan (README, top-level structure, manifests) and rewrites the draft into a single, final prompt that is grounded in the repo's actual stack and conventions, emphasizes good UX and coding patterns, and includes actionable constraints and acceptance criteria. Specific files are referenced only when confidence is high.
-
-Use **Copy** to grab the result, or **Use as Draft** to iterate on it.
+1. **Compose**: Enter your draft prompt, choose a local repository (or drag & drop a folder), and select model & reasoning preferences. Press **Improve →** (⌘↩).
+2. **Interactive Clarification**: The agent performs a fast read-only scan of the codebase and asks 2–4 targeted questions using the `AskUser` tool to clarify scope, tech stack, and conventions.
+3. **Grounded Result**: The agent outputs a final, polished prompt ready to use with an AI coding agent. Easily copy it, use it as a new draft, or inspect earlier answers.
 
 ## Features
 
-- OLED-black, modern dark UI
-- Model picker sourced from your droid configuration (built-ins + custom models from `~/.factory/settings.json`), persisted across launches
-- Live elapsed timer and true cancellation (the underlying droid process is terminated)
-- Repository and model choices remembered between sessions
-- Drag & drop repository selection
+- **Multi-turn AskUser flow**: Answers clarify ambiguity before the final prompt is generated.
+- **Factory OLED design**: Custom dark surfaces (`#020202`), monospace typography, and clean questionnaire cards with keyboard navigation (`1–9`, `Enter`, `↑↓`).
+- **Read-only and safe**: Scans repository manifests and structure without modifying any code.
+- **Model & reasoning customization**: Supports Default, built-in models (Claude Opus 5, Claude Sonnet 5, GPT-5.3 Codex), and custom models from `~/.factory/settings.json`.
+- **Instant cancellation**: Cleanly terminates the agent session and restores your draft.
+- **State persistence**: Remembers repository, model, and reasoning effort across sessions.
 
 ## Requirements
 
-- **macOS 14+** and **Xcode 15+** (provides Swift 5.10 toolchain)
-- **Swift 5.10+** (`swift --version`)
-- **[droid CLI](https://docs.factory.ai)** installed and signed in (required at runtime for Improve)
-- **SwiftLint** for linting: `brew install swiftlint`
+- **macOS 14+** (Apple Silicon arm64)
+- **Node.js 20+ or 22+**
+- **[droid CLI](https://docs.factory.ai)** installed and signed in (`droid auth status`)
 
-## Install
-
-Download the latest signed and notarized `PromptImprover.dmg` from [Releases](../../releases), drag it to Applications, and open it.
-
-## Development — Setup (clone to running)
-
-### Single-command setup
+## Quickstart
 
 ```sh
+# Clone repository
 git clone git@github.com:nikships/prompt-improver.git
 cd prompt-improver
+
+# Run setup and launch development app
 ./Scripts/setup.sh
-# or: make setup
+npm run dev
 ```
 
-The setup script verifies tool prerequisites (Swift, SwiftLint, droid CLI), sets up git hooks, builds the package, and runs the test suite with coverage verification.
-
-### Step-by-step setup
+## Development Commands
 
 ```sh
-# 1. Clone
-git clone git@github.com:nikships/prompt-improver.git
-cd prompt-improver
-
-# 2. Build
-swift build
-
-# 3. Run (debug)
-swift run
-
-# 4. Test & Coverage
-swift test --enable-code-coverage
-./Scripts/check-coverage.sh
-
-# 5. Lint
-brew install swiftlint
-swiftlint lint --strict
+npm run dev           # Start Electron app in development mode with HMR
+npm run build         # Build production main, preload, and renderer bundles
+npm run typecheck     # Typecheck TypeScript files
+npm run lint          # Run ESLint (zero warnings)
+npm run lint:fix      # Auto-fix linting issues
+npm test              # Run unit test suite
+npm run test:coverage # Run test suite and enforce >80% coverage threshold
+npm run package       # Build macOS arm64 DMG and ZIP into dist/
+npm run check         # Run typecheck, lint, test, and build
 ```
 
-Every command above is also run in CI — keep `swift build`, `swift test`, and `swiftlint` green before pushing.
+## License
 
-## Build from source
-
-```sh
-swift build                 # debug build
-swift build -c release      # release binary at .build/release/PromptImprover
-swift run                   # run the debug build
-./Scripts/build-app.sh      # assemble dist/PromptImprover.app (release + Info.plist + ad-hoc sign)
-swift test                              # run tests
-swift test --enable-code-coverage       # run tests with coverage
-swiftlint                   # lint (also: swiftlint lint, CI uses swiftlint lint --strict)
-swiftlint --fix             # auto-fix correctable violations
-```
-
-Release packaging (maintainers only, requires Developer ID + Apple notary credentials):
-
-```sh
-./Scripts/release-package.sh  # sign, notarize, and build DMG/ZIP into dist/
-```
-
-### Tests and coverage
-
-```sh
-swift test                              # run 36 tests
-swift test --enable-code-coverage       # instrument + verify profdata is emitted
-./Scripts/check-coverage.sh             # build, run tests, enforce thresholds
-./Scripts/check-coverage.sh --no-build  # check existing profdata only
-
-# Manual inspection
-TEST_BIN=.build/out/Products/Debug/PromptImproverTests.xctest/Contents/MacOS/PromptImproverTests
-PROF=.build/out/Products/Debug/codecov/default.profdata
-xcrun llvm-cov report "$TEST_BIN" -instr-profile "$PROF"
-xcrun llvm-cov show "$TEST_BIN" -instr-profile "$PROF" Sources/PromptImprover/ModelCatalog.swift
-xcrun llvm-cov show "$TEST_BIN" -instr-profile "$PROF" Sources/PromptImprover/DroidRunner.swift
-```
-
-Enforced thresholds (`Scripts/check-coverage.sh`):
-
-| Scope | Metric | Minimum |
-|-------|--------|---------|
-| `ModelCatalog.swift` | line cover | **90%** (currently 100%) |
-| `TOTAL` (test binary, Sources + Tests) | line cover | **20%** (currently ~26%) |
-
-The TOTAL is modest because UI code (`ContentView`, `LogoView`, `PromptImproverApp`) is not
-unit-testable without a UI host; logic files themselves are well-covered. Adjust thresholds
-upward as more logic is extracted from the view layer.
+MIT

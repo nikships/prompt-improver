@@ -1,10 +1,18 @@
 repos:
   - repo: local
     hooks:
-      - id: swiftlint
-        name: SwiftLint (strict)
-        entry: swiftlint lint --strict
+      - id: typecheck
+        name: TypeScript typecheck
+        entry: npm run typecheck
         language: system
-        types: [swift]
         pass_filenames: false
-        exclude: ^\.agents/
+      - id: lint
+        name: ESLint
+        entry: npm run lint
+        language: system
+        pass_filenames: false
+      - id: test
+        name: Vitest
+        entry: npm test
+        language: system
+        pass_filenames: false

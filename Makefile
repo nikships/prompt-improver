@@ -1,33 +1,42 @@
-.PHONY: all setup build build-release run test coverage lint format clean
+.PHONY: all setup dev build start test coverage lint format typecheck check package app clean
 
 all: build
 
 setup:
 	./Scripts/setup.sh
 
+dev:
+	npm run dev
+
 build:
-	swift build
+	npm run build
 
-build-release:
-	swift build -c release
-
-app:
-	./Scripts/build-app.sh
-
-run:
-	swift run
+start:
+	npm run start
 
 test:
-	swift test
+	npm test
 
 coverage:
-	./Scripts/check-coverage.sh
+	npm run test:coverage
 
 lint:
-	swiftlint lint --strict
+	npm run lint
 
 format:
-	swiftlint --fix
+	npm run lint:fix
+
+typecheck:
+	npm run typecheck
+
+check:
+	npm run check
+
+package:
+	npm run package
+
+app:
+	npm run package
 
 clean:
-	rm -rf .build dist
+	rm -rf out dist coverage node_modules
