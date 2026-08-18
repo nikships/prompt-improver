@@ -1,4 +1,4 @@
-.PHONY: all setup dev build start test coverage lint format typecheck check package app release clean
+.PHONY: all setup dev build start test coverage lint format typecheck check package release clean
 
 all: build
 
@@ -33,9 +33,6 @@ check:
 	npm run check
 
 package:
-	npm run package
-
-app:
 	npm run package
 
 release:

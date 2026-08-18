@@ -16,11 +16,6 @@ export default tseslint.config(
       '.foundry-worktrees/**',
       'package-lock.json',
       '.agents/**',
-      '.build/**',
-      '.swiftpm/**',
-      'Sources/**',
-      'Resources/**',
-      'Tests/PromptImproverTests/**',
     ],
   },
   js.configs.recommended,
@@ -76,14 +71,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tests/**/*.ts', 'Tests/**/*.ts'],
+    files: ['tests/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       'require-yield': 'off',
     },
   },
   {
-    files: ['src/main/**/*.{ts,tsx}', 'tests/**/*.ts', 'Tests/**/*.ts'],
+    files: ['src/main/**/*.{ts,tsx}', 'tests/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node,
