@@ -26,15 +26,15 @@ assignees: ""
 
 ## Environment
 
-- **App version:** <!-- e.g., 1.0.1 (from PromptImprover.app > About or dist/PromptImprover-*.dmg) -->
+- **App version:** <!-- e.g., 2.0.0 (from Prompt Improver > About or dist/PromptImprover-*.dmg) -->
 - **macOS version:** <!-- e.g., 14.5 -->
-- **Xcode / Swift version:** <!-- `xcodebuild -version` and `swift --version` -->
+- **Node / npm version:** <!-- `node --version` and `npm --version` -->
 - **droid CLI version:** <!-- `droid --version` and `droid auth status` -->
-- **Install method:** <!-- DMG release / swift run / dist/PromptImprover.app -->
+- **Install method:** <!-- DMG release / npm run dev / dist/mac-arm64 app bundle -->
 
 ## Logs / Screenshots
 
-<!-- Paste relevant Console.app logs, `droid exec` stderr, or screenshots. Drag images here. -->
+<!-- Paste relevant Console.app logs, DevTools console output, or screenshots. Drag images here. -->
 
 ## Additional context
 
