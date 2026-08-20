@@ -23,6 +23,7 @@ export default defineConfig({
         'src/main/models.ts',
         'src/main/prefs.ts',
         'src/main/env.ts',
+        'src/main/factory-api-key.ts',
       ],
       exclude: [
         'src/renderer/**',

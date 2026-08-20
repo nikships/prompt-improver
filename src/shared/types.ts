@@ -71,3 +71,15 @@ export interface StartSessionInput {
   modelId: string;
   reasoningEffort: ReasoningEffort;
 }
+
+export interface FactoryApiKeyStatus {
+  configured: boolean;
+}
+
+export type SetFactoryApiKeyResult =
+  | { ok: true; status: FactoryApiKeyStatus }
+  | { ok: false; error: string };
+
+export type StartSessionResult =
+  | { ok: true; state: ImproverState }
+  | { ok: false; reason: 'api-key-required' };

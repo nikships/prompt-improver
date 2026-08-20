@@ -4,6 +4,9 @@ import type {
   AskAnswer,
   ModelOption,
   Prefs,
+  FactoryApiKeyStatus,
+  SetFactoryApiKeyResult,
+  StartSessionResult,
 } from './types.js';
 
 export const IPC_CHANNELS = {
@@ -18,11 +21,13 @@ export const IPC_CHANNELS = {
   SET_PREFS: 'improver:setPrefs',
   COPY: 'improver:copy',
   STATE_CHANGE: 'improver:state',
+  GET_FACTORY_API_KEY_STATUS: 'improver:getFactoryApiKeyStatus',
+  SET_FACTORY_API_KEY: 'improver:setFactoryApiKey',
 } as const;
 
 export interface ImproverApi {
   getState(): Promise<ImproverState>;
-  start(input: StartSessionInput): Promise<ImproverState>;
+  start(input: StartSessionInput): Promise<StartSessionResult>;
   answerAsk(answers: AskAnswer[]): Promise<boolean>;
   cancel(): Promise<void>;
   chooseRepo(): Promise<string | null>;
@@ -31,6 +36,8 @@ export interface ImproverApi {
   getPrefs(): Promise<Prefs>;
   setPrefs(patch: Partial<Prefs>): Promise<Prefs>;
   copy(text: string): Promise<void>;
+  getFactoryApiKeyStatus(): Promise<FactoryApiKeyStatus>;
+  setFactoryApiKey(apiKey: string): Promise<SetFactoryApiKeyResult>;
   onStateChange(callback: (state: ImproverState) => void): () => void;
   getPathForFile(file: File): string;
 }

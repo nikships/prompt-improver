@@ -1,26 +1,42 @@
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
 import { useImprover, ImproverProvider } from './store/improver.js';
 import { ComposeScreen } from './screens/ComposeScreen.js';
 import { SessionScreen } from './screens/SessionScreen.js';
 import { ResultScreen } from './screens/ResultScreen.js';
+import { ApiKeyDialog } from './components/ApiKeyDialog.js';
 
 const AppContent: FC = () => {
-  const { state } = useImprover();
+  const { state, apiKeyPromptOpen, submitFactoryApiKey, dismissFactoryApiKeyPrompt } = useImprover();
 
+  let screen: ReactNode;
   switch (state.phase) {
     case 'starting':
     case 'scanning':
     case 'asking':
     case 'resuming':
-      return <SessionScreen />;
+      screen = <SessionScreen />;
+      break;
     case 'complete':
     case 'failed':
-      return <ResultScreen />;
+      screen = <ResultScreen />;
+      break;
     case 'idle':
     case 'cancelled':
     default:
-      return <ComposeScreen />;
+      screen = <ComposeScreen />;
+      break;
   }
+
+  return (
+    <>
+      {screen}
+      <ApiKeyDialog
+        open={apiKeyPromptOpen}
+        onSubmit={submitFactoryApiKey}
+        onDismiss={dismissFactoryApiKeyPrompt}
+      />
+    </>
+  );
 };
 
 export const App: FC = () => {
