@@ -1,6 +1,6 @@
 {
   "name": "prompt-improver",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "description": "Native macOS app that refines draft prompts using the Droid SDK and interactive AskUser questions",
