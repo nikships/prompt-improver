@@ -80,8 +80,8 @@ export const ApiKeyDialog: FC<ApiKeyDialogProps> = ({ open, onSubmit, onDismiss 
           Factory API key required
         </h2>
         <p id={descriptionId} className={styles.description}>
-          Enter a Factory API key to start an improvement session. You can also launch Prompt Improver
-          with FACTORY_API_KEY set.
+          Enter a Factory API key to start an improvement session. It is saved on this Mac and reused
+          on later launches. You can also launch Prompt Improver with FACTORY_API_KEY set.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -101,8 +101,7 @@ export const ApiKeyDialog: FC<ApiKeyDialogProps> = ({ open, onSubmit, onDismiss 
               onChange={(event) => setValue(event.target.value)}
             />
             <p className={styles.support}>
-              The key is kept in memory for this app session and is never added to your prompt or
-              preferences.
+              The key is stored locally on this Mac and is never added to your prompt or preferences.
             </p>
             {error && <p className={styles.error}>{error}</p>}
           </div>

@@ -42,7 +42,7 @@
 - **[droid CLI](https://docs.factory.ai)** installed and available on your `PATH`
 - **Factory API key** (`FACTORY_API_KEY`, or entered in the app prompt)
 
-Prompt Improver authenticates the Droid SDK with a Factory API key. If the app inherits a non-empty `FACTORY_API_KEY` environment variable, it uses that key and does not prompt. Otherwise it asks for a key on launch. An entered key is kept only in memory for the current app run and is never written to preferences.
+Prompt Improver authenticates the Droid SDK with a Factory API key. If the app inherits a non-empty `FACTORY_API_KEY` environment variable, it uses that key and does not prompt. Otherwise it asks for a key on launch. An entered key is stored locally on this Mac and reused on later launches. It is never written to preferences or included in prompts.
 
 ## Quickstart
 
