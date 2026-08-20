@@ -16,4 +16,5 @@ coverage/
 # Foundry / Agent artifacts
 .agents/
 .foundry-worktrees/
-.factory/
+.factory/*
+!.factory/skills/
