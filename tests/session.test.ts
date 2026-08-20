@@ -220,6 +220,127 @@ describe('session', () => {
     vi.restoreAllMocks();
   });
 
+  it('parks and resumes multiple AskUser rounds before completing', async () => {
+    vi.spyOn(findDroidModule, 'findDroid').mockResolvedValue('/mock/bin/droid');
+    let askUserHandlerRef: any = null;
+
+    const mockSession = {
+      id: 'multi-round-session-id',
+      settings: {} as any,
+      stream: async function* (_prompt: string, _opts: any) {
+        const first = await askUserHandlerRef({
+          toolCallId: 'call_round_1',
+          questions: [
+            {
+              index: 0,
+              topic: 'SCOPE',
+              question: 'Target platform?',
+              options: ['macOS', 'Web'],
+              multiSelect: false,
+            },
+            {
+              index: 1,
+              topic: 'UX',
+              question: 'Primary interaction?',
+              options: ['Menu bar', 'Window'],
+              multiSelect: false,
+            },
+          ],
+        });
+
+        expect(first.answers).toEqual([
+          { index: 0, question: 'Target platform?', answer: 'macOS' },
+          { index: 1, question: 'Primary interaction?', answer: 'Menu bar' },
+        ]);
+
+        const second = await askUserHandlerRef({
+          toolCallId: 'call_round_2',
+          questions: [
+            {
+              index: 0,
+              topic: 'TESTING',
+              question: 'How should macOS menu bar behavior be verified?',
+              options: ['Unit tests', 'Manual QA'],
+              multiSelect: false,
+            },
+          ],
+        });
+
+        expect(second.answers).toEqual([
+          {
+            index: 0,
+            question: 'How should macOS menu bar behavior be verified?',
+            answer: 'Unit tests',
+          },
+        ]);
+
+        yield {
+          type: DroidMessageType.Result,
+          success: true,
+          text: 'Final prompt after two rounds.',
+        };
+      },
+      interrupt: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const mockFactory = vi.fn().mockImplementation(async (options) => {
+      askUserHandlerRef = options.askUserHandler;
+      return mockSession;
+    });
+
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
+
+    const waitForAsking = () =>
+      new Promise<void>((resolve) => {
+        if (manager.getState().phase === 'asking') {
+          resolve();
+          return;
+        }
+        const unsub = manager.subscribe((st) => {
+          if (st.phase === 'asking') {
+            unsub();
+            resolve();
+          }
+        });
+      });
+
+    const startPromise = manager.start({
+      draft: 'Build a menu bar app',
+      repoPath: '/mock/repo',
+      modelId: 'claude-sonnet-5',
+      reasoningEffort: 'high',
+    });
+
+    await waitForAsking();
+    expect(manager.getState().pendingAsk?.questions).toHaveLength(2);
+    expect(
+      manager.answerAsk([
+        { index: 0, answer: 'macOS' },
+        { index: 1, answer: 'Menu bar' },
+      ]),
+    ).toBe(true);
+
+    await waitForAsking();
+    expect(manager.getState().answered).toHaveLength(2);
+    expect(manager.getState().pendingAsk?.questions[0].topic).toBe('TESTING');
+    expect(manager.answerAsk([{ index: 0, answer: 'Unit tests' }])).toBe(true);
+
+    const finalState = await startPromise;
+    expect(finalState.phase).toBe('complete');
+    expect(finalState.result).toBe('Final prompt after two rounds.');
+    expect(finalState.answered).toEqual([
+      { topic: 'SCOPE', question: 'Target platform?', answer: 'macOS' },
+      { topic: 'UX', question: 'Primary interaction?', answer: 'Menu bar' },
+      {
+        topic: 'TESTING',
+        question: 'How should macOS menu bar behavior be verified?',
+        answer: 'Unit tests',
+      },
+    ]);
+    vi.restoreAllMocks();
+  });
+
   it('handles stream error failure properly', async () => {
     vi.spyOn(findDroidModule, 'findDroid').mockResolvedValue('/mock/bin/droid');
 
