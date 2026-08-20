@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
   type FC,
 } from 'react';
@@ -23,6 +24,7 @@ interface ImproverContextType {
   repoPath: string;
   selectedModelId: string;
   reasoningEffort: ReasoningEffort;
+  apiKeyPromptOpen: boolean;
   setDraftText: (text: string) => void;
   chooseRepo: () => Promise<void>;
   setRepoPath: (path: string) => Promise<{ ok: boolean; error?: string }>;
@@ -35,6 +37,8 @@ interface ImproverContextType {
   useAsDraft: () => void;
   newPrompt: () => void;
   retry: () => Promise<void>;
+  submitFactoryApiKey: (apiKey: string) => Promise<string | null>;
+  dismissFactoryApiKeyPrompt: () => void;
 }
 
 const DEFAULT_STATE: ImproverState = {
@@ -62,8 +66,10 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [repoPath, setRepoPathState] = useState('');
   const [selectedModelId, setSelectedModelIdState] = useState('');
   const [reasoningEffort, setReasoningEffortState] = useState<ReasoningEffort>('medium');
+  const [apiKeyPromptOpen, setApiKeyPromptOpen] = useState(false);
+  const pendingStartAfterApiKey = useRef(false);
 
-  // Load initial state, models, prefs
+  // Load initial state, models, prefs, and API-key status
   useEffect(() => {
     window.improver.getState().then((initialState) => {
       setState(initialState);
@@ -89,6 +95,13 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
       if (loadedPrefs.reasoningEffort) {
         setReasoningEffortState(loadedPrefs.reasoningEffort);
+      }
+    });
+
+    window.improver.getFactoryApiKeyStatus().then((status) => {
+      if (!status.configured) {
+        pendingStartAfterApiKey.current = false;
+        setApiKeyPromptOpen(true);
       }
     });
 
@@ -127,16 +140,32 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
     window.improver.setPrefs({ reasoningEffort: effort });
   }, []);
 
-  const startImprove = useCallback(async () => {
-    if (!draftText.trim() || !repoPath) return;
-
-    await window.improver.start({
+  const runStart = useCallback(async () => {
+    const result = await window.improver.start({
       draft: draftText,
       repoPath,
       modelId: selectedModelId,
       reasoningEffort,
     });
+
+    if (!result.ok && result.reason === 'api-key-required') {
+      pendingStartAfterApiKey.current = true;
+      setApiKeyPromptOpen(true);
+    }
   }, [draftText, repoPath, selectedModelId, reasoningEffort]);
+
+  const startImprove = useCallback(async () => {
+    if (!draftText.trim() || !repoPath) return;
+
+    const status = await window.improver.getFactoryApiKeyStatus();
+    if (!status.configured) {
+      pendingStartAfterApiKey.current = true;
+      setApiKeyPromptOpen(true);
+      return;
+    }
+
+    await runStart();
+  }, [draftText, repoPath, runStart]);
 
   const answerAsk = useCallback(async (answers: AskAnswer[]) => {
     await window.improver.answerAsk(answers);
@@ -167,6 +196,29 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
     await startImprove();
   }, [draftText, repoPath, startImprove]);
 
+  const submitFactoryApiKey = useCallback(
+    async (apiKey: string): Promise<string | null> => {
+      const result = await window.improver.setFactoryApiKey(apiKey);
+      if (!result.ok) {
+        return result.error;
+      }
+
+      const shouldStart = pendingStartAfterApiKey.current;
+      pendingStartAfterApiKey.current = false;
+      setApiKeyPromptOpen(false);
+      if (shouldStart) {
+        await runStart();
+      }
+      return null;
+    },
+    [runStart],
+  );
+
+  const dismissFactoryApiKeyPrompt = useCallback(() => {
+    setApiKeyPromptOpen(false);
+    pendingStartAfterApiKey.current = false;
+  }, []);
+
   return (
     <ImproverContext.Provider
       value={{
@@ -177,6 +229,7 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
         repoPath,
         selectedModelId,
         reasoningEffort,
+        apiKeyPromptOpen,
         setDraftText,
         chooseRepo,
         setRepoPath,
@@ -189,6 +242,8 @@ export const ImproverProvider: FC<{ children: ReactNode }> = ({ children }) => {
         useAsDraft,
         newPrompt,
         retry,
+        submitFactoryApiKey,
+        dismissFactoryApiKeyPrompt,
       }}
     >
       {children}

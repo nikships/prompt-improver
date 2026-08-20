@@ -2,6 +2,11 @@ import { ipcMain, dialog, clipboard, BrowserWindow } from 'electron';
 import { IPC_CHANNELS } from '@shared/ipc-contract.js';
 import type { StartSessionInput, AskAnswer, Prefs } from '@shared/types.js';
 import { improverSession } from './droid/session.js';
+import {
+  getFactoryApiKey,
+  getFactoryApiKeyStatus,
+  setFactoryApiKey,
+} from './factory-api-key.js';
 import { listModels } from './models.js';
 import { loadPrefs, updatePrefs, validateRepoPath } from './prefs.js';
 
@@ -20,7 +25,19 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.START, async (_event, input: StartSessionInput) => {
-    return await improverSession.start(input);
+    if (!getFactoryApiKey()) {
+      return { ok: false as const, reason: 'api-key-required' as const };
+    }
+    const state = await improverSession.start(input);
+    return { ok: true as const, state };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_FACTORY_API_KEY_STATUS, () => {
+    return getFactoryApiKeyStatus();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SET_FACTORY_API_KEY, (_event, apiKey: unknown) => {
+    return setFactoryApiKey(apiKey);
   });
 
   ipcMain.handle(IPC_CHANNELS.ANSWER_ASK, (_event, answers: AskAnswer[]) => {

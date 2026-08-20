@@ -23,6 +23,7 @@ import {
   answersComplete,
 } from './ask-user.js';
 import { buildImprovementPrompt } from './prompt.js';
+import { getFactoryApiKey } from '../factory-api-key.js';
 
 export function mapReasoningEffort(effort: ReasoningEffort): SdkReasoningEffort {
   switch (effort) {
@@ -80,6 +81,7 @@ export function formatToolActivity(
 }
 
 export type SessionFactory = (options: CreateSessionOptions) => Promise<DroidSession>;
+export type ApiKeyProvider = () => string | null;
 
 interface PendingAskDeferred {
   resolve: (result: AskUserResult) => void;
@@ -107,9 +109,11 @@ export class ImproverSessionManager {
   private abortController: AbortController | null = null;
   private pendingAskDeferred: PendingAskDeferred | null = null;
   private sessionFactory: SessionFactory;
+  private apiKeyProvider: ApiKeyProvider;
 
-  constructor(sessionFactory?: SessionFactory) {
+  constructor(sessionFactory?: SessionFactory, apiKeyProvider?: ApiKeyProvider) {
     this.sessionFactory = sessionFactory ?? sdkCreateSession;
+    this.apiKeyProvider = apiKeyProvider ?? getFactoryApiKey;
   }
 
   public getState(): ImproverState {
@@ -178,6 +182,11 @@ export class ImproverSessionManager {
       return this.getState();
     }
 
+    const apiKey = (this.apiKeyProvider() ?? '').trim();
+    if (!apiKey) {
+      return this.getState();
+    }
+
     this.state = {
       phase: 'starting',
       draft: input.draft,
@@ -230,6 +239,7 @@ export class ImproverSessionManager {
       const session = await this.sessionFactory({
         cwd: input.repoPath,
         execPath: droidPath,
+        apiKey,
         modelId: input.modelId ? input.modelId : undefined,
         reasoningEffort: mapReasoningEffort(input.reasoningEffort),
         autonomyLevel: AutonomyLevel.Low,

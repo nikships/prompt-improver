@@ -6,13 +6,16 @@ import type {
   AskAnswer,
   Prefs,
   ModelOption,
+  FactoryApiKeyStatus,
+  SetFactoryApiKeyResult,
+  StartSessionResult,
 } from '@shared/types.js';
 
 const api: ImproverApi = {
   getState(): Promise<ImproverState> {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_STATE);
   },
-  start(input: StartSessionInput): Promise<ImproverState> {
+  start(input: StartSessionInput): Promise<StartSessionResult> {
     return ipcRenderer.invoke(IPC_CHANNELS.START, input);
   },
   answerAsk(answers: AskAnswer[]): Promise<boolean> {
@@ -38,6 +41,12 @@ const api: ImproverApi = {
   },
   copy(text: string): Promise<void> {
     return ipcRenderer.invoke(IPC_CHANNELS.COPY, text);
+  },
+  getFactoryApiKeyStatus(): Promise<FactoryApiKeyStatus> {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_FACTORY_API_KEY_STATUS);
+  },
+  setFactoryApiKey(apiKey: string): Promise<SetFactoryApiKeyResult> {
+    return ipcRenderer.invoke(IPC_CHANNELS.SET_FACTORY_API_KEY, apiKey);
   },
   onStateChange(callback: (state: ImproverState) => void): () => void {
     const handler = (_event: Electron.IpcRendererEvent, state: ImproverState) => {

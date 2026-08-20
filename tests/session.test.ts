@@ -7,6 +7,9 @@ import {
 } from '../src/main/droid/session.js';
 import * as findDroidModule from '../src/main/droid/find-droid.js';
 
+const TEST_FACTORY_API_KEY = 'test-factory-api-key';
+const testApiKeyProvider = () => TEST_FACTORY_API_KEY;
+
 describe('session', () => {
   it('maps reasoning effort values correctly', () => {
     expect(mapReasoningEffort('off')).toBe(SdkReasoningEffort.Off);
@@ -33,7 +36,7 @@ describe('session', () => {
   });
 
   it('ignores start when draft is empty or repoPath is missing', async () => {
-    const manager = new ImproverSessionManager();
+    const manager = new ImproverSessionManager(undefined, testApiKeyProvider);
     const state1 = await manager.start({
       draft: '',
       repoPath: '/path/to/repo',
@@ -51,10 +54,29 @@ describe('session', () => {
     expect(state2.phase).toBe('idle');
   });
 
+  it('leaves the manager idle when no API key is configured', async () => {
+    const findDroid = vi.spyOn(findDroidModule, 'findDroid');
+    const mockFactory = vi.fn();
+    const manager = new ImproverSessionManager(mockFactory, () => null);
+
+    const state = await manager.start({
+      draft: 'Prompt text',
+      repoPath: '/path/to/repo',
+      modelId: '',
+      reasoningEffort: 'medium',
+    });
+
+    expect(state.phase).toBe('idle');
+    expect(state.error).toBeNull();
+    expect(findDroid).not.toHaveBeenCalled();
+    expect(mockFactory).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
   it('fails with helpful message when droid is not found', async () => {
     vi.spyOn(findDroidModule, 'findDroid').mockResolvedValue(null);
 
-    const manager = new ImproverSessionManager();
+    const manager = new ImproverSessionManager(undefined, testApiKeyProvider);
     const state = await manager.start({
       draft: 'Prompt text',
       repoPath: '/path/to/repo',
@@ -68,7 +90,7 @@ describe('session', () => {
   });
 
   it('limits activity stack to 4 latest items', () => {
-    const manager = new ImproverSessionManager();
+    const manager = new ImproverSessionManager(undefined, testApiKeyProvider);
     manager.addActivity('Act 1');
     manager.addActivity('Act 2');
     manager.addActivity('Act 3');
@@ -82,7 +104,7 @@ describe('session', () => {
   });
 
   it('returns false for answerAsk when not asking or answers incomplete', () => {
-    const manager = new ImproverSessionManager();
+    const manager = new ImproverSessionManager(undefined, testApiKeyProvider);
     expect(manager.answerAsk([])).toBe(false);
   });
 
@@ -140,7 +162,7 @@ describe('session', () => {
       return mockSession;
     });
 
-    const manager = new ImproverSessionManager(mockFactory);
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
 
     // Start session in background
     const startPromise = manager.start({
@@ -187,6 +209,14 @@ describe('session', () => {
       question: 'Target platform?',
       answer: 'macOS',
     });
+    expect(mockFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: TEST_FACTORY_API_KEY,
+        cwd: '/mock/repo',
+        execPath: '/mock/bin/droid',
+        modelId: 'claude-sonnet-5',
+      }),
+    );
     vi.restoreAllMocks();
   });
 
@@ -204,7 +234,7 @@ describe('session', () => {
     };
 
     const mockFactory = vi.fn().mockResolvedValue(mockSession);
-    const manager = new ImproverSessionManager(mockFactory);
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
 
     const finalState = await manager.start({
       draft: 'Build something',
@@ -256,7 +286,7 @@ describe('session', () => {
       return mockSession;
     });
 
-    const manager = new ImproverSessionManager(mockFactory);
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
 
     const startPromise = manager.start({
       draft: 'Some prompt to cancel',
@@ -313,7 +343,7 @@ describe('session', () => {
     };
 
     const mockFactory = vi.fn().mockResolvedValue(mockSession);
-    const manager = new ImproverSessionManager(mockFactory);
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
 
     const finalState = await manager.start({
       draft: 'Build something',
@@ -346,7 +376,7 @@ describe('session', () => {
     };
 
     const mockFactory = vi.fn().mockResolvedValue(mockSession);
-    const manager = new ImproverSessionManager(mockFactory);
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
 
     const finalState = await manager.start({
       draft: 'Draft needing quota',
@@ -372,7 +402,7 @@ describe('session', () => {
     };
 
     const mockFactory = vi.fn().mockResolvedValue(mockSession);
-    const manager = new ImproverSessionManager(mockFactory);
+    const manager = new ImproverSessionManager(mockFactory, testApiKeyProvider);
 
     const finalState = await manager.start({
       draft: 'Draft with empty response',

@@ -39,7 +39,10 @@
 
 - **macOS 14+** (Apple Silicon arm64)
 - **Node.js 20+ or 22+**
-- **[droid CLI](https://docs.factory.ai)** installed and signed in (`droid auth status`)
+- **[droid CLI](https://docs.factory.ai)** installed and available on your `PATH`
+- **Factory API key** (`FACTORY_API_KEY`, or entered in the app prompt)
+
+Prompt Improver authenticates the Droid SDK with a Factory API key. If the app inherits a non-empty `FACTORY_API_KEY` environment variable, it uses that key and does not prompt. Otherwise it asks for a key on launch. An entered key is kept only in memory for the current app run and is never written to preferences.
 
 ## Quickstart
 
@@ -51,6 +54,12 @@ cd prompt-improver
 # Run setup and launch development app
 ./Scripts/setup.sh
 npm run dev
+```
+
+For development you can also pass the key in the environment (use a placeholder, never commit credentials):
+
+```sh
+FACTORY_API_KEY=your_key npm run dev
 ```
 
 ## Development Commands
